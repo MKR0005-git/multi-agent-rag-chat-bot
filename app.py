@@ -5,7 +5,7 @@ import os
 app = FastAPI()
 
 os.environ["HF_API_TOKEN"] = "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"
-print(os.getenv("HF_API_TOKEN"))
+
 
 llm = HuggingFaceHub(repo_id="google/flan-t5-small")
 
