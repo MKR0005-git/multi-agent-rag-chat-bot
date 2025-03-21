@@ -24,8 +24,10 @@ agent = initialize_agent(
     tools=[tool],
     llm=llm,
     agent="zero-shot-react-description",
-    verbose=True
+    verbose=True,
+    handle_parsing_errors=True  # Added this parameter
 )
+
 
 def get_agent_response(query: str) -> str:
     # Use the agent to generate a response based on the query
