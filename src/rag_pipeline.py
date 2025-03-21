@@ -9,8 +9,12 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 # Define the directory where Chroma will store its data
 persist_directory = "chroma_db"
 
-# Configure Chroma settings using the new API
-client_settings = Settings(chroma_db_impl="duckdb+parquet", persist_directory=persist_directory)
+# Use the new configuration without deprecated parameters.
+# Note: We remove chroma_db_impl and only use persist_directory and other supported settings.
+client_settings = Settings(
+    persist_directory=persist_directory,
+    anonymized_telemetry=False  # Disable telemetry if desired
+)
 chroma_client = chromadb.Client(settings=client_settings)
 
 # Sample documents to add to the vector store
