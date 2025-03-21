@@ -6,7 +6,7 @@ app = FastAPI()
 
 # Set Hugging Face API Key
 os.environ["HF_API_TOKEN"] = "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"
-
+print(os.getenv("HF_API_TOKEN")) 
 # Load model from Hugging Face
 llm = HuggingFaceHub(repo_id="google/flan-t5-small")
 
