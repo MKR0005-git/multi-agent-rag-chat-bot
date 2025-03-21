@@ -1,10 +1,7 @@
-import os
 from fastapi import FastAPI
+from src.agents import get_agent_response  # Import your multi-agent response function
 
 app = FastAPI()
-
-# Set your Hugging Face API token here (replace with your actual token)
-os.environ["HF_API_TOKEN"] = "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"
 
 @app.get("/")
 async def read_root():
@@ -12,4 +9,5 @@ async def read_root():
 
 @app.get("/ask")
 async def ask(query: str):
-    return {"response": f"You asked: {query}"}
+    response = get_agent_response(query)
+    return {"response": response}
