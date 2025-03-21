@@ -13,9 +13,8 @@ llm = HuggingFaceHub(repo_id="google/flan-t5-small")
 @app.get("/")
 async def read_root():
     return {"message": "Hello, Multi-Agent RAG with Hugging Face!"}
-
-
 @app.get("/ask")
-async def ask_question(query: str = Query(..., description="Your query")):
-    response = llm(query)
-    return {"response": response}
+def ask(query: str):
+    return {"response": f"You asked: {query}"}
+
+
