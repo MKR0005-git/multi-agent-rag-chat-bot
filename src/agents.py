@@ -3,7 +3,7 @@ from langchain.llms import HuggingFaceHub
 from langchain.agents import initialize_agent, Tool
 
 # Set your Hugging Face API token
-os.environ["HF_API_TOKEN"] = "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"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 # Load the Hugging Face model via LangChain
 llm = HuggingFaceHub(repo_id="google/flan-t5-small", model_kwargs={"temperature": 0.7})
