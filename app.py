@@ -4,18 +4,18 @@ import os
 
 app = FastAPI()
 
-# Set your Hugging Face API key
+# Set Hugging Face API Key
 os.environ["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"] = "your_huggingface_api_key"
 
-# Load a model from Hugging Face
+# Load model from Hugging Face
 llm = HuggingFaceHub(repo_id="google/flan-t5-small")
 
 @app.get("/")
 def read_root():
     return {"message": "Hello, Multi-Agent RAG with Hugging Face!"}
+
 @app.get("/ask")
-def ask_question(query: str = ""):  # Default empty query to avoid errors
-    if not query:
-        return {"error": "Query parameter is required"}
+def ask_question(query: str):
     response = llm(query)
     return {"response": response}
+
