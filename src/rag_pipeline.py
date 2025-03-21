@@ -8,7 +8,8 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 
 # Initialize Chroma vector store
 persist_directory = "chroma_db"
-chroma_client = chromadb.Client(Settings(chroma_db_impl="duckdb+parquet", persist_directory=persist_directory))
+chroma_client = chromadb.Client(persist_directory=persist_directory)
+
 
 # Assume you have some documents to add:
 documents = [
