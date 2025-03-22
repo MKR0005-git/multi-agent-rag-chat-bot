@@ -5,7 +5,7 @@ import requests
 st.set_page_config(page_title="Multi-Agent RAG Chatbot", page_icon="🤖", layout="wide")
 
 # Title and Description
-st.title("🤖 Multi-Agent RAG Chatbot")
+st.title("🤖 Hi Bala, how are you doing?")
 st.markdown("""
 ### Ask any question and get responses powered by an advanced Retrieval-Augmented Generation system!
 """)
