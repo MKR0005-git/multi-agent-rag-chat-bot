@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.llms import HuggingFaceHub  # Correct import path
+from langchain_huggingface import HuggingFaceEndpoint  # Corrected Import
 from langchain.prompts import PromptTemplate
 from sentence_transformers import CrossEncoder
 
@@ -28,16 +28,16 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM (No API Key Here)
-llm = HuggingFaceHub(
+# Define LLM
+llm = HuggingFaceEndpoint(
     repo_id="mistralai/Mistral-7B-Instruct-v0.3",
     model_kwargs={"temperature": 0.7, "max_length": 256}
 )
 
 # Define Prompt Template
 prompt_template = PromptTemplate(
-    input_variables=["context", "query"],
-    template="Answer the query based on the context provided: {query}\n\nContext: {context}"
+    input_variables=["query"],
+    template="Answer the query concisely without additional context. Question: {query}"
 )
 
 # Query Handling Function
@@ -45,6 +45,8 @@ def query_rag_system(query):
     # Retrieve top 3 documents from FAISS
     retrieved_docs = vector_db.similarity_search(query, k=3)
 
+    # Debug: Print retrieved documents
+    print("Retrieved Context:", retrieved_docs)
 
     # Extract text content and re-rank
     ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
@@ -52,11 +54,11 @@ def query_rag_system(query):
     # Construct context from top-ranked documents
     context = "\n\n".join(ranked_docs)
 
-    # Format prompt
-    prompt = prompt_template.format(context=context, query=query)
+    # Format prompt (without forcing context if not needed)
+    prompt = prompt_template.format(query=query)
 
     # Generate response from LLM
-    response = llm(prompt)
+    response = llm.invoke(prompt)
 
     return response
 
