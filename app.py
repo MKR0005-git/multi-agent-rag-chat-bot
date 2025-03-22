@@ -21,9 +21,8 @@ if not API_KEY:
     logger.error("❌ Missing Hugging Face API Key. Set HUGGINGFACEHUB_API_TOKEN in environment variables.")
     raise ValueError("Missing API Key. Set HUGGINGFACEHUB_API_TOKEN.")
 
-# Hugging Face Model API Endpoint (Update with your actual model)
-AI_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-
+# Hugging Face Model API Endpoint
+AI_MODEL_API = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-1.3B"
 
 @app.post("/query")
 def process_query(request: QueryRequest):
@@ -31,8 +30,8 @@ def process_query(request: QueryRequest):
     Process user query and fetch response from Hugging Face model.
     """
     payload = {
-        "inputs": request.query,
-        "parameters": {"temperature": 0.7, "max_new_tokens": 100}
+        "inputs": f"You are an AI assistant. Keep responses short and relevant. Answer concisely: {request.query}",
+        "parameters": {"temperature": 0.3, "max_new_tokens": 50}
     }
 
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -42,7 +41,11 @@ def process_query(request: QueryRequest):
         response.raise_for_status()  # Ensure request was successful
 
         ai_response = response.json()
-        generated_text = ai_response[0].get("generated_text", "❌ Error: No response generated.")
+        generated_text = ai_response[0].get("generated_text", "").strip()
+
+        # Filter irrelevant responses
+        if not generated_text or "forum" in generated_text.lower() or "coax cable" in generated_text.lower():
+            generated_text = "I'm not sure about that. Could you clarify?"
 
         logger.info(f"✅ Query: {request.query} | AI Response: {generated_text}")
         return {"query": request.query, "response": generated_text}
