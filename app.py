@@ -1,56 +1,68 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests
-import logging
-import os
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint
+from langchain.prompts import PromptTemplate
+from sentence_transformers import CrossEncoder
 
-# Initialize FastAPI app
 app = FastAPI()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Load Embeddings Model
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# Define request model
+# Simulated FAISS database (Replace with actual FAISS index)
+vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
+
+# Define retriever (Limit to top 3 documents)
+retriever = vector_db.as_retriever(search_kwargs={"k": 3})
+
+# Initialize Cross-Encoder for Re-Ranking
+reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+def rerank_documents(query, retrieved_docs):
+    """Re-rank retrieved documents using a cross-encoder model."""
+    pairs = [(query, doc) for doc in retrieved_docs]
+    scores = reranker.predict(pairs)
+    ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
+    return ranked_docs
+
+# Define LLM (Fixed to prevent long or extra responses)
+llm = HuggingFaceEndpoint(
+    repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+    temperature=0.3,
+    model_kwargs={"max_length": 50}
+)
+
+# **Final Fixed Prompt Template**
+prompt_template = PromptTemplate(
+    input_variables=["query"],
+    template="Provide a brief and direct answer to the question.\n\nQuestion: {query}\n\nAnswer:"
+)
+
+def query_rag_system(query):
+    # Retrieve top 3 documents from FAISS
+    retrieved_docs = vector_db.similarity_search(query, k=3)
+
+    # Extract text content and re-rank
+    ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
+
+    # Format prompt
+    prompt = prompt_template.format(query=query)
+
+    # Generate response from LLM
+    raw_response = llm.invoke(prompt)
+
+    # **Fix: Extract only the first line of the response**
+    response = raw_response.strip().split("\n")[0]
+
+    return response
+
+# API Endpoint
 class QueryRequest(BaseModel):
     query: str
 
-# Load Hugging Face API key from environment variable
-API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-if not API_KEY:
-    logger.error("❌ Missing Hugging Face API Key. Set HUGGINGFACEHUB_API_TOKEN in environment variables.")
-    raise ValueError("Missing API Key. Set HUGGINGFACEHUB_API_TOKEN.")
-
-# Hugging Face Model API Endpoint
-AI_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-
 @app.post("/query")
-def process_query(request: QueryRequest):
-    """
-    Process user query and fetch response from Hugging Face model.
-    """
-    payload = {
-        "inputs": [{"role": "system", "content": "You are a helpful AI assistant."},
-                   {"role": "user", "content": request.query}],
-        "parameters": {"temperature": 0.3, "max_new_tokens": 50}
-    }
-
-    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-
-    try:
-        response = requests.post(AI_MODEL_API, json=payload, headers=headers)
-        response.raise_for_status()  # Ensure request was successful
-
-        ai_response = response.json()
-        generated_text = ai_response[0].get("generated_text", "").strip()
-
-        # Handle irrelevant responses
-        if not generated_text or generated_text.lower().startswith("you are an ai assistant"):
-            generated_text = "I'm here to help! How can I assist you?"
-
-        logger.info(f"✅ Query: {request.query} | AI Response: {generated_text}")
-        return {"query": request.query, "response": generated_text}
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Error fetching AI response: {e}")
-        return {"query": request.query, "response": "❌ Sorry, there was an error processing your request."}
+def query_endpoint(request: QueryRequest):
+    response = query_rag_system(request.query)
+    return {"query": request.query, "response": response}
