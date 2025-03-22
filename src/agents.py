@@ -9,7 +9,7 @@ if not HUGGINGFACEHUB_API_TOKEN:
 
 # Load the Hugging Face model via LangChain
 try:
-    llm = HuggingFaceHub(repo_id="EleutherAI/gpt-neo-1.3B", model_kwargs={"temperature": 0.7})
+    llm = HuggingFaceHub(repo_id="mistralai/Mistral-7B-Instruct-v0.3", model_kwargs={"temperature": 0.7})
 except Exception as e:
     print(f"Error loading Hugging Face model: {e}")
     raise RuntimeError("Failed to load Hugging Face model.")
