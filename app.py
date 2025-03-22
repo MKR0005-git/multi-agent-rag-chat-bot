@@ -28,17 +28,17 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM (Corrected)
+# Define LLM (Fix: Limit Answer Length)
 llm = HuggingFaceEndpoint(
     repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-    temperature=0.3,  # Lower temp to reduce randomness
-    model_kwargs={"max_length": 100}  # Shorter max_length to prevent rambling
+    temperature=0.3,  # Reduce randomness
+    model_kwargs={"max_length": 50}  # Prevent long responses
 )
 
-# Updated Prompt Template (Fix)
+# **Fixed Prompt Template** - Forces a Single Answer
 prompt_template = PromptTemplate(
     input_variables=["query"],
-    template="Answer the question accurately and concisely.\n\nQuestion: {query}\n\nAnswer:"
+    template="Answer the question accurately and concisely.\n\nQuestion: {query}\n\nAnswer: (Stop after answering the question)"
 )
 
 # Query Handling Function
@@ -49,20 +49,21 @@ def query_rag_system(query):
     # Extract text content and re-rank
     ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
 
-    # Construct context from top-ranked documents
-    context = "\n\n".join(ranked_docs)
-
     # Format prompt
     prompt = prompt_template.format(query=query)
 
     # Generate response from LLM
-    response = llm.invoke(prompt)
+    raw_response = llm.invoke(prompt)
+
+    # **Fix: Take only the first sentence**
+    response = raw_response.split("\n")[0].strip()
 
     # Debugging Output
     print("Prompt:", prompt)
-    print("Raw LLM Response:", response)
+    print("Raw LLM Response:", raw_response)
+    print("Fixed Response:", response)
 
-    return response.strip()  # Strip unwanted characters
+    return response
 
 # API Endpoint
 class QueryRequest(BaseModel):
