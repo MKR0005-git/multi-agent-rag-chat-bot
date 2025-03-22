@@ -1,10 +1,11 @@
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
 from langchain.prompts import PromptTemplate
 from sentence_transformers import CrossEncoder
+import uvicorn
 
 app = FastAPI()
 
@@ -66,3 +67,8 @@ class QueryRequest(BaseModel):
 def query_endpoint(request: QueryRequest):
     response = query_rag_system(request.query)
     return {"query": request.query, "response": response}
+
+# Run the server (Auto-detect PORT from Render)
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))  # Render assigns a PORT dynamically
+    uvicorn.run(app, host="0.0.0.0", port=port)
