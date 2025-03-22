@@ -28,11 +28,10 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM (Replace with correct Hugging Face model)
+# Define LLM (No API Key Here)
 llm = HuggingFaceHub(
-    repo_id="mistralai/Mistral-7B-Instruct-v0.3",  # Updated model
-    model_kwargs={"temperature": 0.7, "max_length": 256},
-    huggingfacehub_api_token="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"
+    repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+    model_kwargs={"temperature": 0.7, "max_length": 256}
 )
 
 # Define Prompt Template
