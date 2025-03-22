@@ -4,3 +4,4 @@ uvicorn
 requests
 langchain-huggingface==0.1.0
 langchain-community
+faiss-cpu
