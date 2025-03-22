@@ -1,5 +1,6 @@
 import os
 import uvicorn
+import pickle
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -27,10 +28,19 @@ except Exception as e:
     print(f"Error loading embeddings: {e}")
     raise RuntimeError("Failed to load embeddings model.")
 
-# Simulated FAISS database (Replace with actual FAISS index)
+# Persistent FAISS Database Setup
+FAISS_INDEX_PATH = "faiss_index.pkl"
+
 try:
-    print("Initializing FAISS database...")
-    vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
+    if os.path.exists(FAISS_INDEX_PATH):
+        print("Loading existing FAISS index...")
+        with open(FAISS_INDEX_PATH, "rb") as f:
+            vector_db = pickle.load(f)
+    else:
+        print("Initializing FAISS database...")
+        vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
+        with open(FAISS_INDEX_PATH, "wb") as f:
+            pickle.dump(vector_db, f)
 except Exception as e:
     print(f"Error initializing FAISS: {e}")
     raise RuntimeError("Failed to initialize FAISS database.")
@@ -56,7 +66,7 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM (Fixed to prevent long or extra responses)
+# Define LLM Model with HuggingFaceEndpoint
 try:
     print("Loading LLM model...")
     llm = HuggingFaceEndpoint(
@@ -68,7 +78,7 @@ except Exception as e:
     print(f"Error loading LLM model: {e}")
     raise RuntimeError("Failed to load LLM model.")
 
-# **Final Fixed Prompt Template**
+# Fixed Prompt Template
 prompt_template = PromptTemplate(
     input_variables=["query"],
     template="Provide a brief and direct answer to the question.\n\nQuestion: {query}\n\nAnswer:"
@@ -98,7 +108,7 @@ def query_endpoint(request: QueryRequest):
         raise HTTPException(status_code=500, detail="Internal Server Error")
     return {"query": request.query, "response": response}
 
-# Start FastAPI on the correct port for Railway
+# Start FastAPI on Railway
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))  # Railway assigns PORT dynamically
     print(f"Starting server on port {port}...")
