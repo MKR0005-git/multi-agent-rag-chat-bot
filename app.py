@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 import logging
+import os
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -14,41 +15,31 @@ logger = logging.getLogger(__name__)
 class QueryRequest(BaseModel):
     query: str
 
-# External AI model API (Replace with your actual AI service URL)
-AI_MODEL_API = "https://api.openai.com/v1/chat/completions"  # Example OpenAI API
+# Hugging Face API Configuration
+HF_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+HF_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
-# API Key (Replace with your actual API key)
-API_KEY = "your_openai_api_key"
-
-# Custom system prompt to enhance responses
-SYSTEM_PROMPT = (
-    "You are an intelligent AI assistant with deep knowledge. "
-    "Provide structured, detailed, and meaningful responses. "
-    "Ensure clarity, factual accuracy, and coherence."
-)
+# Headers for API request
+HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 @app.post("/query")
 def process_query(request: QueryRequest):
     """
-    Process user query and fetch response from AI model.
+    Process user query and fetch response from Hugging Face model.
     """
-    user_prompt = f"User Query: {request.query}\nAssistant: "
-
-    payload = {
-        "model": "gpt-4",  # Replace with actual model name
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.7
-    }
-
-    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+    payload = {"inputs": request.query}
 
     try:
-        response = requests.post(AI_MODEL_API, json=payload, headers=headers)
+        response = requests.post(HF_MODEL_API, json=payload, headers=HEADERS)
         response.raise_for_status()  # Raise error if API fails
-        ai_response = response.json()["choices"][0]["message"]["content"]
+
+        # Extract response
+        data = response.json()
+        if isinstance(data, list) and "generated_text" in data[0]:
+            ai_response = data[0]["generated_text"]
+        else:
+            ai_response = "Sorry, I couldn't generate a response."
+
         logger.info(f"Query: {request.query} | AI Response: {ai_response}")
         return {"query": request.query, "response": ai_response}
 
