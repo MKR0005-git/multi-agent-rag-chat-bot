@@ -15,7 +15,8 @@ st.markdown("""
 user_query = st.text_input("Enter your question:", placeholder="Type your question here...")
 
 # Backend API URL (Fetch from Railway Environment Variables)
-API_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://127.0.0.1:8000") + "/query"
+RAILWAY_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+API_URL = f"https://{RAILWAY_DOMAIN}/query" if RAILWAY_DOMAIN else "http://127.0.0.1:8000/query"
 
 # Function to fetch response from FastAPI backend
 def get_response(query):
