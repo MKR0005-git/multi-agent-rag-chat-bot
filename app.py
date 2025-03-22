@@ -2,11 +2,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint  # Ensure correct import
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain.prompts import PromptTemplate
 from sentence_transformers import CrossEncoder
 
-# Initialize FastAPI
 app = FastAPI()
 
 # Load Embeddings Model
@@ -28,20 +27,19 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM (Fix: Limit Answer Length)
+# Define LLM (Fixed to prevent long or extra responses)
 llm = HuggingFaceEndpoint(
     repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-    temperature=0.3,  # Reduce randomness
-    model_kwargs={"max_length": 50}  # Prevent long responses
+    temperature=0.3,
+    model_kwargs={"max_length": 50}
 )
 
-# **Fixed Prompt Template** - Forces a Single Answer
+# **Final Fixed Prompt Template**
 prompt_template = PromptTemplate(
     input_variables=["query"],
-    template="Answer the question accurately and concisely.\n\nQuestion: {query}\n\nAnswer: (Stop after answering the question)"
+    template="Provide a brief and direct answer to the question.\n\nQuestion: {query}\n\nAnswer:"
 )
 
-# Query Handling Function
 def query_rag_system(query):
     # Retrieve top 3 documents from FAISS
     retrieved_docs = vector_db.similarity_search(query, k=3)
@@ -55,13 +53,8 @@ def query_rag_system(query):
     # Generate response from LLM
     raw_response = llm.invoke(prompt)
 
-    # **Fix: Take only the first sentence**
-    response = raw_response.split("\n")[0].strip()
-
-    # Debugging Output
-    print("Prompt:", prompt)
-    print("Raw LLM Response:", raw_response)
-    print("Fixed Response:", response)
+    # **Fix: Extract only the first line of the response**
+    response = raw_response.strip().split("\n")[0]
 
     return response
 
