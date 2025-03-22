@@ -37,13 +37,14 @@ llm = HuggingFaceHub(
 # Define Prompt Template
 prompt_template = PromptTemplate(
     input_variables=["context", "query"],
-    template="Given the context: {context}\nAnswer the query: {query}"
+    template="Answer the query based on the context provided: {query}\n\nContext: {context}"
 )
 
 # Query Handling Function
 def query_rag_system(query):
     # Retrieve top 3 documents from FAISS
-    retrieved_docs = retriever.get_relevant_documents(query)
+   retrieved_docs = vector_db.similarity_search(query, k=3)
+
 
     # Extract text content and re-rank
     ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
