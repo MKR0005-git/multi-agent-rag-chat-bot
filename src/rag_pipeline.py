@@ -3,6 +3,7 @@ from chromadb.config import Settings
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 import os
+from agents import get_agent_response  # Import the agent response function
 
 # Initialize the embedding model (using a sentence transformer)
 try:
@@ -58,3 +59,18 @@ def retrieve_documents(query: str, k: int = 2):
     except Exception as e:
         print(f"Error retrieving documents: {e}")
         return []
+
+def query_with_agent(query: str):
+    """
+    Retrieve documents and pass them to the agent for further processing and response generation.
+    """
+    retrieved_docs = retrieve_documents(query, k=3)  # Retrieve top 3 documents
+    # You can further process the documents or format them before passing to the agent
+    doc_texts = [doc.page_content for doc in retrieved_docs]
+
+    # Format query and documents to pass to the agent
+    formatted_query = f"Here are some documents: {doc_texts}. Query: {query}"
+
+    # Get the agent's response using the formatted query
+    response = get_agent_response(formatted_query)
+    return response
