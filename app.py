@@ -30,7 +30,8 @@ def process_query(request: QueryRequest):
     Process user query and fetch response from Hugging Face model.
     """
     payload = {
-        "inputs": f"You are an AI assistant. Keep responses short and relevant. Answer concisely: {request.query}",
+        "inputs": [{"role": "system", "content": "You are a helpful AI assistant."},
+                   {"role": "user", "content": request.query}],
         "parameters": {"temperature": 0.3, "max_new_tokens": 50}
     }
 
@@ -43,9 +44,9 @@ def process_query(request: QueryRequest):
         ai_response = response.json()
         generated_text = ai_response[0].get("generated_text", "").strip()
 
-        # Filter irrelevant responses
-        if not generated_text or "forum" in generated_text.lower() or "coax cable" in generated_text.lower():
-            generated_text = "I'm not sure about that. Could you clarify?"
+        # Handle irrelevant responses
+        if not generated_text or generated_text.lower().startswith("you are an ai assistant"):
+            generated_text = "I'm here to help! How can I assist you?"
 
         logger.info(f"✅ Query: {request.query} | AI Response: {generated_text}")
         return {"query": request.query, "response": generated_text}
