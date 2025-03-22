@@ -1,74 +1,61 @@
-import os
-from langchain.agents import AgentType, initialize_agent
-from langchain.memory import ConversationBufferMemory
+from fastapi import FastAPI, Query
+from langchain_community.llms import HuggingFaceHub
+from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.tools import Tool
-from fastapi import FastAPI, Query
-from huggingface_hub import InferenceClient
-from src.rag_pipeline import retrieve_documents  # Ensure your retrieval function is correctly imported
+from pydantic import BaseModel
+import os
 
-# Load Hugging Face API Key (Use Correct Name)
-HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")  # Ensure it's set in your environment
-
-# Initialize Hugging Face Client
-MODEL_NAME = "google/flan-t5-small"
-hf_client = InferenceClient(MODEL_NAME, token=HF_API_KEY)
-
-# Retrieval Function
-def retrieve_and_format(query: str):
-    documents = retrieve_documents(query)
-    context = "\n".join([doc["content"] for doc in documents])
-    return f"Context:\n{context}\n\nQuery: {query}"
-
-# Hugging Face Inference Function
-def query_llm(prompt: str):
-    response = hf_client.text_generation(prompt, max_new_tokens=200)
-    return response.strip()
-
-# Define Tool for Retrieval
-retrieval_tool = Tool(
-    name="RetrieveDocuments",
-    func=retrieve_and_format,
-    description="Retrieves relevant documents given a query."
-)
-
-# Agent Memory
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-# Initialize Agent (Using Only Hugging Face)
-agent_executor = initialize_agent(
-    tools=[retrieval_tool],
-    llm=LLMChain(
-        llm=lambda prompt: query_llm(prompt),  # Uses Hugging Face API
-        prompt=PromptTemplate.from_template("{chat_history}\n{query}"),
-        memory=memory
-    ),
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True
-)
-
-# Create FastAPI App
+# Initialize FastAPI app
 app = FastAPI()
+
+# Hugging Face API Key (Ensure it's set in your environment)
+HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+
+# Load Hugging Face LLM
+llm = HuggingFaceHub(
+    repo_id="google/flan-t5-small",
+    model_kwargs={"temperature": 0.7, "max_length": 256},
+    huggingfacehub_api_token=HF_API_KEY
+)
+
+# Load embeddings model for retrieval
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+# Simulated FAISS database (replace with actual FAISS index)
+vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
+
+# Define Prompt Template for LLM
+prompt_template = PromptTemplate(
+    input_variables=["context", "query"],
+    template="Given the context: {context}\nAnswer the query: {query}"
+)
+
+# LLM Chain
+llm_chain = LLMChain(prompt=prompt_template, llm=llm)
+
+class QueryModel(BaseModel):
+    query: str
 
 @app.get("/")
 def read_root():
-    return {"message": "Multi-Agent RAG Chatbot is running!"}
+    return {"message": "Multi-Agent RAG Chatbot is Running!"}
 
 @app.get("/retrieve")
-def retrieve(query: str = Query(..., description="Query for document retrieval")):
-    documents = retrieve_documents(query)
-    return {"documents": documents}
+def retrieve(query: str = Query(..., title="Query")):
+    """Retrieves relevant documents from FAISS DB."""
+    docs = vector_db.similarity_search(query, k=2)
+    return {"documents": [{"id": f"doc{i+1}", "content": doc.page_content} for i, doc in enumerate(docs)]}
 
 @app.get("/ask")
-def ask(query: str = Query(..., description="User query for chatbot")):
-    try:
-        retrieved_context = retrieve_and_format(query)
-        response = query_llm(retrieved_context)
-        return {"response": response}
-    except Exception as e:
-        return {"error": str(e)}
+def ask(query: str = Query(..., title="User Query")):
+    """Generates response using retrieved context and LLM."""
+    retrieved_docs = vector_db.similarity_search(query, k=2)
+    context = " ".join([doc.page_content for doc in retrieved_docs])
+    
+    # Generate Response
+    response = llm_chain.run({"context": context, "query": query})
+    
+    return {"query": query, "response": response}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
