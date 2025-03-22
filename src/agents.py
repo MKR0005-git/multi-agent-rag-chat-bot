@@ -6,7 +6,7 @@ from langchain.agents import initialize_agent, Tool
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 # Load the Hugging Face model via LangChain
-llm = HuggingFaceHub(repo_id="google/flan-t5-small", model_kwargs={"temperature": 0.7})
+llm = HuggingFaceHub(repo_id="google/flan-t5-base", model_kwargs={"temperature": 0.7})
 
 # Define a custom tool (for example, a simple processing tool)
 def custom_tool(query: str) -> str:
