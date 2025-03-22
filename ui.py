@@ -23,9 +23,11 @@ def get_response(query):
         if response.status_code == 200:
             return response.json().get("response", "Sorry, I couldn't fetch a response.")
         else:
-            return f"Error: {response.status_code} - {response.text}"
+            # More descriptive error message for API response failure
+            return f"Error: Failed to fetch response. Status Code: {response.status_code} - {response.text}"
     except Exception as e:
-        return f"Error: {str(e)}"
+        # Handle network or other exceptions
+        return f"Error: An unexpected issue occurred. Please try again later. Details: {str(e)}"
 
 # Button to send query
 if st.button("Ask AI"):  
@@ -33,9 +35,13 @@ if st.button("Ask AI"):
         with st.spinner("Thinking..."):
             bot_response = get_response(user_query)
             st.write("### 🤖 Response:")
-            st.success(bot_response)
+            # Show the response or error message
+            if "Error" in bot_response:
+                st.error(bot_response)
+            else:
+                st.success(bot_response)
     else:
-        st.warning("Please enter a question!")
+        st.warning("Please enter a valid question!")
 
 # Footer
 st.markdown("---")
