@@ -43,7 +43,7 @@ prompt_template = PromptTemplate(
 # Query Handling Function
 def query_rag_system(query):
     # Retrieve top 3 documents from FAISS
-   retrieved_docs = vector_db.similarity_search(query, k=3)
+    retrieved_docs = vector_db.similarity_search(query, k=3)
 
 
     # Extract text content and re-rank
