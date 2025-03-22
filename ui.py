@@ -1,6 +1,6 @@
 import streamlit as st
-from fastapi import FastAPI
 import requests
+import os
 
 # Streamlit UI Setup
 st.set_page_config(page_title="Multi-Agent RAG Chatbot", page_icon="🤖", layout="wide")
@@ -14,8 +14,8 @@ st.markdown("""
 # Input field for user query
 user_query = st.text_input("Enter your question:", placeholder="Type your question here...")
 
-# Backend API URL (Modify this to match your FastAPI endpoint)
-API_URL = "http://127.0.0.1:8000/query"
+# Backend API URL (Fetch from Railway Environment Variables)
+API_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://127.0.0.1:8000") + "/query"
 
 # Function to fetch response from FastAPI backend
 def get_response(query):
