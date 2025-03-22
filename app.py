@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
-import os
 import logging
+import os
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -15,39 +15,37 @@ logger = logging.getLogger(__name__)
 class QueryRequest(BaseModel):
     query: str
 
-# Get Hugging Face API Key from environment variables
-HF_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-HF_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+# Load Hugging Face API key from environment variable
+API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+if not API_KEY:
+    logger.error("❌ Missing Hugging Face API Key. Set HUGGINGFACEHUB_API_TOKEN in environment variables.")
+    raise ValueError("Missing API Key. Set HUGGINGFACEHUB_API_TOKEN.")
 
-# Ensure API Key is available
-if not HF_API_TOKEN:
-    logger.error("Missing Hugging Face API Key. Set HUGGINGFACEHUB_API_TOKEN in environment variables.")
+# Hugging Face Model API Endpoint (Update with your actual model)
+AI_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 @app.post("/query")
 def process_query(request: QueryRequest):
     """
     Process user query and fetch response from Hugging Face model.
     """
-    headers = {"Authorization": f"Bearer {HF_API_TOKEN}", "Content-Type": "application/json"}
-    payload = {"inputs": request.query}
+    payload = {
+        "inputs": request.query,
+        "parameters": {"temperature": 0.7, "max_new_tokens": 100}
+    }
+
+    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
     try:
-        response = requests.post(HF_MODEL_API, json=payload, headers=headers)
-        response.raise_for_status()  # Raise error if API call fails
-        
-        response_data = response.json()
+        response = requests.post(AI_MODEL_API, json=payload, headers=headers)
+        response.raise_for_status()  # Ensure request was successful
 
-        # Handle different response formats
-        if isinstance(response_data, list) and len(response_data) > 0:
-            ai_response = response_data[0].get("generated_text", "No response generated.")
-        elif isinstance(response_data, dict) and "error" in response_data:
-            ai_response = f"Error from API: {response_data['error']}"
-        else:
-            ai_response = "Unexpected response format."
+        ai_response = response.json()
+        generated_text = ai_response[0].get("generated_text", "❌ Error: No response generated.")
 
-        logger.info(f"Query: {request.query} | AI Response: {ai_response}")
-        return {"query": request.query, "response": ai_response}
+        logger.info(f"✅ Query: {request.query} | AI Response: {generated_text}")
+        return {"query": request.query, "response": generated_text}
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching AI response: {e}")
-        return {"query": request.query, "response": "Sorry, there was an error processing your request."}
+        logger.error(f"❌ Error fetching AI response: {e}")
+        return {"query": request.query, "response": "❌ Sorry, there was an error processing your request."}
