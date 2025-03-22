@@ -1,61 +1,70 @@
-from fastapi import FastAPI, Query
-from langchain_community.llms import HuggingFaceHub
+from fastapi import FastAPI
+from pydantic import BaseModel
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel
-import os
+from langchain.llms import HuggingFaceHub
+from sentence_transformers import CrossEncoder
 
-# Initialize FastAPI app
+# Initialize FastAPI
 app = FastAPI()
 
-# Hugging Face API Key (Ensure it's set in your environment)
-HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-
-# Load Hugging Face LLM
-llm = HuggingFaceHub(
-    repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-    model_kwargs={"temperature": 0.7, "max_length": 256},
-    huggingfacehub_api_token=HF_API_KEY
-)
-
-# Load embeddings model for retrieval
+# Load Embeddings Model
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# Simulated FAISS database (replace with actual FAISS index)
+# Simulated FAISS database (Replace with actual FAISS index)
 vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
 
-# Define Prompt Template for LLM
+# Define retriever (Limit to top 3 documents)
+retriever = vector_db.as_retriever(search_kwargs={"k": 3})
+
+# Initialize Cross-Encoder for Re-Ranking
+reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+def rerank_documents(query, retrieved_docs):
+    """Re-rank retrieved documents using a cross-encoder model."""
+    pairs = [(query, doc) for doc in retrieved_docs]  # Pair query with each doc
+    scores = reranker.predict(pairs)  # Get relevance scores
+    ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
+    return ranked_docs
+
+# Define LLM (Replace with correct Hugging Face model)
+llm = HuggingFaceHub(
+    repo_id="mistralai/Mistral-7B-Instruct-v0.3",  # Updated model
+    model_kwargs={"temperature": 0.7, "max_length": 256},
+    huggingfacehub_api_token="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"
+)
+
+# Define Prompt Template
 prompt_template = PromptTemplate(
     input_variables=["context", "query"],
     template="Given the context: {context}\nAnswer the query: {query}"
 )
 
-# LLM Chain
-llm_chain = LLMChain(prompt=prompt_template, llm=llm)
+# Query Handling Function
+def query_rag_system(query):
+    # Retrieve top 3 documents from FAISS
+    retrieved_docs = retriever.get_relevant_documents(query)
 
-class QueryModel(BaseModel):
+    # Extract text content and re-rank
+    ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
+
+    # Construct context from top-ranked documents
+    context = "\n\n".join(ranked_docs)
+
+    # Format prompt
+    prompt = prompt_template.format(context=context, query=query)
+
+    # Generate response from LLM
+    response = llm(prompt)
+
+    return response
+
+# API Endpoint
+class QueryRequest(BaseModel):
     query: str
 
-@app.get("/")
-def read_root():
-    return {"message": "Multi-Agent RAG Chatbot is Running!"}
-
-@app.get("/retrieve")
-def retrieve(query: str = Query(..., title="Query")):
-    """Retrieves relevant documents from FAISS DB."""
-    docs = vector_db.similarity_search(query, k=2)
-    return {"documents": [{"id": f"doc{i+1}", "content": doc.page_content} for i, doc in enumerate(docs)]}
-
-@app.get("/ask")
-def ask(query: str = Query(..., title="User Query")):
-    """Generates response using retrieved context and LLM."""
-    retrieved_docs = vector_db.similarity_search(query, k=2)
-    context = " ".join([doc.page_content for doc in retrieved_docs])
-    
-    # Generate Response
-    response = llm_chain.run({"context": context, "query": query})
-    
-    return {"query": query, "response": response}
-
+@app.post("/query")
+def query_endpoint(request: QueryRequest):
+    response = query_rag_system(request.query)
+    return {"query": request.query, "response": response}
