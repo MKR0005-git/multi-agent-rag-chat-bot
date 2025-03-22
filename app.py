@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceHub
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.llms import HuggingFaceHub  # Correct import path
 from langchain.prompts import PromptTemplate
 from sentence_transformers import CrossEncoder
 
