@@ -17,7 +17,7 @@ class QueryRequest(BaseModel):
 
 # Get Hugging Face API Key from environment variables
 HF_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-HF_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+HF_MODEL_API = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
 
 # Ensure API Key is available
 if not HF_API_TOKEN:
