@@ -28,10 +28,11 @@ def rerank_documents(query, retrieved_docs):
     ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
     return ranked_docs
 
-# Define LLM
+# Define LLM (Fix: `temperature` is passed directly, not inside `model_kwargs`)
 llm = HuggingFaceEndpoint(
     repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-    model_kwargs={"temperature": 0.7, "max_length": 256}
+    temperature=0.7,
+    model_kwargs={"max_length": 256}  # Other kwargs remain here
 )
 
 # Define Prompt Template
