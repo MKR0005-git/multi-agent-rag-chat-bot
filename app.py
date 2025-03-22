@@ -15,7 +15,7 @@ HF_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Load Hugging Face LLM
 llm = HuggingFaceHub(
-    repo_id="google/flan-t5-small",
+    repo_id="mistralai/Mistral-7B-Instruct",
     model_kwargs={"temperature": 0.7, "max_length": 256},
     huggingfacehub_api_token=HF_API_KEY
 )
