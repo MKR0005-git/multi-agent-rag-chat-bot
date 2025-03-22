@@ -22,7 +22,7 @@ if not API_KEY:
     raise ValueError("Missing API Key. Set HUGGINGFACEHUB_API_TOKEN.")
 
 # Hugging Face Model API Endpoint (Update with your actual model)
-AI_MODEL_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+AI_MODEL_API = "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf"
 
 @app.post("/query")
 def process_query(request: QueryRequest):
