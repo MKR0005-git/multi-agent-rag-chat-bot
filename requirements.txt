@@ -2,4 +2,5 @@ fastapi
 streamlit
 uvicorn
 requests
-langchain_community
+langchain-huggingface==0.1.0
+langchain-community
