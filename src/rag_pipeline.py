@@ -1,76 +1,39 @@
-import chromadb
-from chromadb.config import Settings
+import os
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
-import os
-from agents import get_agent_response  # Import the agent response function
+from langchain.schema import Document
+from llama_cpp import Llama
 
-# Initialize the embedding model (using a sentence transformer)
-try:
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-except Exception as e:
-    print(f"Error loading embedding model: {e}")
-    raise RuntimeError("Failed to load embedding model.")
+# ============ Load Local LLaMA Model ============
+MODEL_PATH = "path/to/your/model.gguf"
+llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
-# Define the directory where ChromaDB will store its data
-persist_directory = os.getenv("CHROMA_DB_DIR", "chroma_db")  # Set via environment variable
+# ============ Setup ChromaDB (Vector Store) ============
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+CHROMA_DB_DIR = "chroma_db"
+vectorstore = Chroma(persist_directory=CHROMA_DB_DIR, embedding_function=embeddings)
 
-# ChromaDB settings
-try:
-    client_settings = Settings(
-        persist_directory=persist_directory,
-        anonymized_telemetry=False  # Disable telemetry if desired
-    )
-    chroma_client = chromadb.PersistentClient(path=persist_directory)
-except Exception as e:
-    print(f"Error initializing ChromaDB: {e}")
-    raise RuntimeError("Failed to initialize ChromaDB.")
+class RAGPipeline:
+    """Retrieval-Augmented Generation pipeline using local LLM and ChromaDB."""
+    
+    def retrieve_documents(self, query, k=3):
+        """Retrieve relevant documents from ChromaDB."""
+        return vectorstore.similarity_search(query, k=k)
 
-# Sample documents to add to the vector store (Replace with actual data)
-documents = [
-    "Document 1 text content.",
-    "Document 2 text content.",
-    "Document 3 text content."
-]
-metadatas = [{"source": "doc1"}, {"source": "doc2"}, {"source": "doc3"}]
-ids = ["doc1", "doc2", "doc3"]
+    def generate_answer(self, query):
+        """Retrieve documents and generate an answer using the LLM."""
+        docs = self.retrieve_documents(query)
+        context = " ".join([doc.page_content for doc in docs])
 
-# Create or load a vectorstore using Chroma
-try:
-    vectorstore = Chroma.from_texts(
-        texts=documents, 
-        embedding=embeddings, 
-        metadatas=metadatas, 
-        ids=ids, 
-        client=chroma_client
-    )
-except Exception as e:
-    print(f"Error initializing vectorstore: {e}")
-    raise RuntimeError("Failed to initialize vectorstore.")
+        prompt = f"Here is relevant information: {context}\n\nNow answer this query: {query}"
+        response = llm(prompt)
 
-def retrieve_documents(query: str, k: int = 2):
-    """
-    Perform a similarity search on the vectorstore using the given query.
-    Returns the top 'k' documents.
-    """
-    try:
-        docs = vectorstore.similarity_search(query, k=k)
-        return docs
-    except Exception as e:
-        print(f"Error retrieving documents: {e}")
-        return []
+        return response["choices"][0]["text"]
 
-def query_with_agent(query: str):
-    """
-    Retrieve documents and pass them to the agent for further processing and response generation.
-    """
-    retrieved_docs = retrieve_documents(query, k=3)  # Retrieve top 3 documents
-    # You can further process the documents or format them before passing to the agent
-    doc_texts = [doc.page_content for doc in retrieved_docs]
-
-    # Format query and documents to pass to the agent
-    formatted_query = f"Here are some documents: {doc_texts}. Query: {query}"
-
-    # Get the agent's response using the formatted query
-    response = get_agent_response(formatted_query)
-    return response
+# Example usage
+if __name__ == "__main__":
+    rag = RAGPipeline()
+    query = "What are the applications of artificial intelligence in healthcare?"
+    
+    response = rag.generate_answer(query)
+    print("Generated Answer:", response)
