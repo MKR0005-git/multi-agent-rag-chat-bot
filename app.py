@@ -1,68 +1,41 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint
-from langchain.prompts import PromptTemplate
-from sentence_transformers import CrossEncoder
+import os
+import streamlit as st
+from llama_cpp import Llama
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.schema import Document
 
-app = FastAPI()
+# ============ SETUP LOCAL LLM ============
 
-# Load Embeddings Model
+# Path to the downloaded LLaMA/Mistral GGUF model
+MODEL_PATH = "path/to/your/model.gguf"
+
+# Load LLaMA model with low memory usage
+llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
+
+# ============ SETUP CHROMADB =============
+
+# Load embeddings model (small and efficient)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# Simulated FAISS database (Replace with actual FAISS index)
-vector_db = FAISS.from_texts(["Example document 1", "Example document 2"], embeddings)
+# Define persistent storage directory
+CHROMA_DB_DIR = "chroma_db"
+vectorstore = Chroma(persist_directory=CHROMA_DB_DIR, embedding_function=embeddings)
 
-# Define retriever (Limit to top 3 documents)
-retriever = vector_db.as_retriever(search_kwargs={"k": 3})
+# ============ STREAMLIT UI ==============
+st.title("Local Multi-Agent RAG Chatbot")
 
-# Initialize Cross-Encoder for Re-Ranking
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+query = st.text_input("Enter your query:")
 
-def rerank_documents(query, retrieved_docs):
-    """Re-rank retrieved documents using a cross-encoder model."""
-    pairs = [(query, doc) for doc in retrieved_docs]
-    scores = reranker.predict(pairs)
-    ranked_docs = [doc for _, doc in sorted(zip(scores, retrieved_docs), reverse=True)]
-    return ranked_docs
+if query:
+    # Retrieve relevant documents
+    retrieved_docs = vectorstore.similarity_search(query, k=3)
+    doc_texts = " ".join([doc.page_content for doc in retrieved_docs])
 
-# Define LLM (Fixed to prevent long or extra responses)
-llm = HuggingFaceEndpoint(
-    repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-    temperature=0.3,
-    model_kwargs={"max_length": 50}
-)
+    # Generate response using local LLM
+    prompt = f"Here are some relevant documents: {doc_texts}\nAnswer the following query: {query}"
+    response = llm(prompt)
 
-# **Final Fixed Prompt Template**
-prompt_template = PromptTemplate(
-    input_variables=["query"],
-    template="Provide a brief and direct answer to the question.\n\nQuestion: {query}\n\nAnswer:"
-)
-
-def query_rag_system(query):
-    # Retrieve top 3 documents from FAISS
-    retrieved_docs = vector_db.similarity_search(query, k=3)
-
-    # Extract text content and re-rank
-    ranked_docs = rerank_documents(query, [doc.page_content for doc in retrieved_docs])
-
-    # Format prompt
-    prompt = prompt_template.format(query=query)
-
-    # Generate response from LLM
-    raw_response = llm.invoke(prompt)
-
-    # **Fix: Extract only the first line of the response**
-    response = raw_response.strip().split("\n")[0]
-
-    return response
-
-# API Endpoint
-class QueryRequest(BaseModel):
-    query: str
-
-@app.post("/query")
-def query_endpoint(request: QueryRequest):
-    response = query_rag_system(request.query)
-    return {"query": request.query, "response": response}
+    # Display response
+    st.write("### AI Response:")
+    st.write(response["choices"][0]["text"])
