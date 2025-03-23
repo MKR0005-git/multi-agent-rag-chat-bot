@@ -1,48 +1,38 @@
-# agents.py
-import os
-from langchain.llms import HuggingFaceHub
-from langchain.agents import initialize_agent, Tool
+from llama_cpp import Llama
 
-# Ensure Hugging Face API token is set via environment variables
-HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-if not HUGGINGFACEHUB_API_TOKEN:
-    raise ValueError("Hugging Face API token is missing. Set 'HUGGINGFACEHUB_API_TOKEN' in Railway.")
+# Load Local LLaMA model
+MODEL_PATH = "path/to/your/model.gguf"
+llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
-# Load the Hugging Face model via LangChain
-try:
-    llm = HuggingFaceHub(repo_id="mistralai/Mistral-7B-Instruct-v0.3", model_kwargs={"temperature": 0.7})
-except Exception as e:
-    print(f"Error loading Hugging Face model: {e}")
-    raise RuntimeError("Failed to load Hugging Face model.")
+class Agent:
+    """Base class for all agents."""
+    def __init__(self, name):
+        self.name = name
 
-# Define a custom tool (for example, a simple processing tool)
-def custom_tool(query: str) -> str:
-    # Here, you could integrate a retrieval function or any custom logic
-    return f"Processed query: {query}"
+    def run(self, query, context=""):
+        """Process the query with context using LLM."""
+        prompt = f"{context}\n{query}"
+        response = llm(prompt)
+        return response["choices"][0]["text"]
 
-tool = Tool(
-    name="CustomTool",
-    func=custom_tool,
-    description="A custom tool to process queries."
-)
+class ResearchAgent(Agent):
+    """Agent specialized in research and information retrieval."""
+    def run(self, query, context=""):
+        return super().run(f"Provide a detailed research answer: {query}", context)
 
-# Initialize an agent with the tool; using a simple zero-shot agent for demonstration
-try:
-    agent = initialize_agent(
-        tools=[tool],
-        llm=llm,
-        agent="zero-shot-react-description",
-        verbose=True,
-        handle_parsing_errors=True  # Added this parameter
-    )
-except Exception as e:
-    print(f"Error initializing agent: {e}")
-    raise RuntimeError("Failed to initialize the agent.")
+class SummarizerAgent(Agent):
+    """Agent specialized in summarization."""
+    def run(self, query, context=""):
+        return super().run(f"Summarize this information: {context}", query)
 
-def get_agent_response(query: str) -> str:
-    """Use the agent to generate a response based on the query."""
-    try:
-        return agent.run(query)
-    except Exception as e:
-        print(f"Error running agent: {e}")
-        return "Error processing request."
+# Example usage
+if __name__ == "__main__":
+    research_agent = ResearchAgent("Researcher")
+    summarizer_agent = SummarizerAgent("Summarizer")
+
+    query = "Explain quantum computing in simple terms."
+    research_response = research_agent.run(query)
+    summary_response = summarizer_agent.run(query, research_response)
+
+    print("Research Response:", research_response)
+    print("Summary Response:", summary_response)
