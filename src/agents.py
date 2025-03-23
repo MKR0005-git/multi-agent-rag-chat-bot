@@ -1,38 +1,41 @@
+import os
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage, AIMessage
 from llama_cpp import Llama
 
-# Load Local LLaMA model
-MODEL_PATH = "path/to/your/model.gguf"
+# Setup Local LLM
+MODEL_PATH = "models/mistral-7b-instruct.gguf"  # Update path
 llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
-class Agent:
-    """Base class for all agents."""
-    def __init__(self, name):
-        self.name = name
+def generate_response(agent_prompt, user_query):
+    """Generate a response using the local LLM."""
+    prompt = f"{agent_prompt}\nUser Query: {user_query}"
+    response = llm(prompt)
+    return response["choices"][0]["text"].strip()
 
-    def run(self, query, context=""):
-        """Process the query with context using LLM."""
-        prompt = f"{context}\n{query}"
-        response = llm(prompt)
-        return response["choices"][0]["text"]
+# Define specialized agents
+class ResearchAgent:
+    def respond(self, query):
+        prompt = "You are a research assistant. Provide detailed, well-cited answers."
+        return generate_response(prompt, query)
 
-class ResearchAgent(Agent):
-    """Agent specialized in research and information retrieval."""
-    def run(self, query, context=""):
-        return super().run(f"Provide a detailed research answer: {query}", context)
+class SummaryAgent:
+    def respond(self, query):
+        prompt = "Summarize key points in a concise and clear way."
+        return generate_response(prompt, query)
 
-class SummarizerAgent(Agent):
-    """Agent specialized in summarization."""
-    def run(self, query, context=""):
-        return super().run(f"Summarize this information: {context}", query)
+class CreativeAgent:
+    def respond(self, query):
+        prompt = "Be creative and generate engaging, thought-provoking responses."
+        return generate_response(prompt, query)
 
-# Example usage
-if __name__ == "__main__":
-    research_agent = ResearchAgent("Researcher")
-    summarizer_agent = SummarizerAgent("Summarizer")
-
-    query = "Explain quantum computing in simple terms."
-    research_response = research_agent.run(query)
-    summary_response = summarizer_agent.run(query, research_response)
-
-    print("Research Response:", research_response)
-    print("Summary Response:", summary_response)
+# Agent selection
+def get_agent(agent_type):
+    if agent_type == "research":
+        return ResearchAgent()
+    elif agent_type == "summary":
+        return SummaryAgent()
+    elif agent_type == "creative":
+        return CreativeAgent()
+    else:
+        raise ValueError("Unknown agent type")
