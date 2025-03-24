@@ -7,7 +7,7 @@ from langchain.vectorstores import Chroma
 # ============ SETUP LOCAL LLM ============
 
 # Path to the downloaded LLaMA/Mistral GGUF model
-MODEL_PATH = "models/mistral-7b-instruct.gguf"  # Update this to your actual model path
+MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"  # Update this to your actual model path
 
 # Load LLaMA model with optimized parameters for low memory usage
 llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
