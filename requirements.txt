@@ -3,10 +3,11 @@ fastapi
 uvicorn
 requests
 sentence-transformers
-faiss-cpu
 numpy
 torch
 langchain
 langchain-community
 llama-cpp-python
 chromadb
+tqdm
+pydantic
