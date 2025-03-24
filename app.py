@@ -30,17 +30,17 @@ if query:
     with st.spinner("🔎 Retrieving documents..."):
         # Retrieve relevant documents
         retrieved_docs = vectorstore.similarity_search(query, k=3)
-        doc_texts = " ".join([doc.page_content for doc in retrieved_docs])
+        doc_texts = " ".join([doc.page_content for doc in retrieved_docs]) if retrieved_docs else "No relevant documents found."
 
     with st.spinner("🤖 Generating response..."):
         # Generate response using local LLM
-        prompt = f"Here are some relevant documents: {doc_texts}\nAnswer the following query: {query}"
+        prompt = f"You are a helpful AI assistant. Answer the question in a conversational way.\nContext: {doc_texts}\nUser: {query}\nAI:"
         response = llm(prompt, max_tokens=512)
-        full_response = response["choices"][0]["text"].strip()
+        full_response = response["choices"][0]["text"].strip() if "choices" in response else "I'm sorry, I couldn't generate a response."
 
     # Display response
     st.subheader("AI Response:")
     st.write(full_response)
-    
+
     # Debugging: Print full response to console
     print(full_response)
