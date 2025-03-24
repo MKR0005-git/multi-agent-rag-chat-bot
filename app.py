@@ -10,7 +10,7 @@ from langchain.vectorstores import Chroma
 MODEL_PATH = r"C:\Users\kedha\multi-agent-rag-chat-bot\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
 # Load LLaMA/Mistral model with optimized parameters for low memory usage
-llm = Llama(model_path=MODEL_PATH, n_ctx=4096, n_batch=256)
+llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=128, cache=True)  # Reduced context and batch for speed
 
 # ============ SETUP CHROMADB =============
 
@@ -33,10 +33,10 @@ if query:
         doc_texts = " ".join([doc.page_content for doc in retrieved_docs]) if retrieved_docs else "No relevant documents found."
 
     with st.spinner("🤖 Generating response..."):
-        # Generate response using local LLM
+        # Generate response using local LLM with streaming
         prompt = f"You are a helpful AI assistant. Answer the question in a conversational way.\nContext: {doc_texts}\nUser: {query}\nAI:"
-        response = llm(prompt, max_tokens=512)
-        full_response = response["choices"][0]["text"].strip() if "choices" in response else "I'm sorry, I couldn't generate a response."
+        response = llm(prompt, max_tokens=256, stream=True)  # Enabled streaming for faster response
+        full_response = "".join(chunk["choices"][0]["text"] for chunk in response).strip() if "choices" in response else "I'm sorry, I couldn't generate a response."
 
     # Display response
     st.subheader("AI Response:")
