@@ -6,18 +6,18 @@ from langchain.vectorstores import Chroma
 
 # ============ SETUP LOCAL LLM ============
 
-# Path to the downloaded LLaMA/Mistral GGUF model
-MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"  # Update this to your actual model path
+# Use absolute path for reliability
+MODEL_PATH = r"C:\Users\kedha\multi-agent-rag-chat-bot\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
-# Load LLaMA model with optimized parameters for low memory usage
+# Load LLaMA/Mistral model with optimized parameters for low memory usage
 llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
 # ============ SETUP CHROMADB =============
 
-# Load embeddings model (lightweight)
+# Load lightweight embedding model
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# Define persistent storage directory
+# Define persistent storage directory for vector database
 CHROMA_DB_DIR = "chroma_db"
 vectorstore = Chroma(persist_directory=CHROMA_DB_DIR, embedding_function=embeddings)
 
