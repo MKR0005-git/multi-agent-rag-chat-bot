@@ -4,7 +4,8 @@ from langchain.vectorstores import Chroma
 from llama_cpp import Llama
 
 # ========== Setup Local LLM ==========
-MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"  # Updated to match the actual model file
+MODEL_PATH = r"C:\Users\kedha\multi-agent-rag-chat-bot\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+ # Updated to match the actual model file
 llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
 # ========== Setup ChromaDB ==========
