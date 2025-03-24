@@ -4,10 +4,10 @@ from langchain.vectorstores import Chroma
 from llama_cpp import Llama
 
 # ========== Setup Local LLM ==========
-MODEL_PATH = "models/mistral-7b-instruct.gguf"  # Update with actual path
+MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"  # Updated to match the actual model file
 llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
 
-# ========== Setup ChromaDB ===========
+# ========== Setup ChromaDB ==========
 CHROMA_DB_DIR = "chroma_db"
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = Chroma(persist_directory=CHROMA_DB_DIR, embedding_function=embeddings)
