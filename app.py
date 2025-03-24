@@ -8,12 +8,11 @@ from langchain.vectorstores import Chroma
 
 MODEL_PATH = r"C:\Users\kedha\multi-agent-rag-chat-bot\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
-# Load LLaMA/Mistral model with optimized parameters
 llm = Llama(
     model_path=MODEL_PATH,
-    n_ctx=2048,  # Reduce context length for better speed
-    n_batch=128,  # Reduce batch size to optimize memory usage
-    n_threads=os.cpu_count(),  # Use all CPU cores for better performance
+    n_ctx=2048,
+    n_batch=128,
+    n_threads=os.cpu_count(),
 )
 
 # ============ SETUP CHROMADB =============
@@ -35,10 +34,14 @@ if query:
     with st.spinner("🤖 Generating response..."):
         prompt = f"You are a helpful AI assistant. Answer in a conversational way.\nContext: {doc_texts}\nUser: {query}\nAI:"
         
-        response = ""
-        for chunk in llm(prompt, max_tokens=256, stream=True):  # Stream output
-            response += chunk["choices"][0]["text"]
-            st.write(response)  # Display partial response in real time
+        # Create an empty placeholder for response
+        response_container = st.empty()
+        full_response = ""
+
+        for chunk in llm(prompt, max_tokens=256, stream=True):
+            full_response += chunk["choices"][0]["text"]
+            response_container.write(full_response)  # Update the same text block instead of creating new lines
 
     # Debugging: Print response to console
-    print(response)
+    print(full_response)
+
