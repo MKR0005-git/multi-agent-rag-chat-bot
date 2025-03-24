@@ -10,7 +10,7 @@ from langchain.vectorstores import Chroma
 MODEL_PATH = r"C:\Users\kedha\multi-agent-rag-chat-bot\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf"
 
 # Load LLaMA/Mistral model with optimized parameters for low memory usage
-llm = Llama(model_path=MODEL_PATH, n_ctx=2048, n_batch=256)
+llm = Llama(model_path=MODEL_PATH, n_ctx=4096, n_batch=256)
 
 # ============ SETUP CHROMADB =============
 
@@ -35,8 +35,12 @@ if query:
     with st.spinner("🤖 Generating response..."):
         # Generate response using local LLM
         prompt = f"Here are some relevant documents: {doc_texts}\nAnswer the following query: {query}"
-        response = llm(prompt)
+        response = llm(prompt, max_tokens=512)
+        full_response = response["choices"][0]["text"].strip()
 
     # Display response
     st.subheader("AI Response:")
-    st.write(response["choices"][0]["text"])
+    st.write(full_response)
+    
+    # Debugging: Print full response to console
+    print(full_response)
